@@ -1,0 +1,181 @@
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Expense Tracker</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+      integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN"
+      crossorigin="anonymous"
+    />
+    <script
+      src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"
+      integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL"
+      crossorigin="anonymous"
+      defer
+    ></script>
+    <script
+      src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"
+      defer
+    ></script>
+  </head>
+  <style>
+    h1 {
+        text-align: center;
+    }
+    h2 {
+        margin-left: 65px;
+    }
+    #user-data {
+      list-style: none;
+      margin-top: 20px;
+      padding: 0;
+      display: flex;
+      flex-direction: row;
+    }
+    li {
+      margin-left: 30px;
+      font-weight: 700;
+    }
+  </style>
+  <body>
+    <h1>Expense Tracker</h1>
+    <div>
+      <form id="my-form">
+        <ul id="user-data">
+          <li>
+            <input
+              type="hidden"
+              name="id"
+              value="<%= require('uuid').v4() %>"
+            />
+          </li>
+          <li>
+            <label for="expense-amount">Choose Expense Amount : </label>
+            <input type="number" name="amount" id="expense-amount" required />
+          </li>
+          <li>
+            <label for="expense-description">Expense Description :</label>
+            <input
+              type="text"
+              name="description"
+              id="expense-description"
+              required
+            />
+          </li>
+          <li>
+            <label for="expense-category">Choose a Category:</label>
+            <select name="category" id="expense-category" required>
+              <option value="food">food</option>
+              <option value="movie">movie</option>
+              <option value="Car">car</option>
+              <option value="outing">outing</option>
+            </select>
+          </li>
+          <li>
+            <button type="submit">Add Expenses</button>
+          </li>
+        </ul>
+      </form>
+      <div>
+        <h2>Expenses</h2>
+        <ul id="user-list"></ul>
+      </div>
+    </div>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        const form = document.getElementById("my-form");
+        const userList = document.getElementById("user-list");
+        let updateExpenseId = null;
+
+        form.addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const expenseAmount = document.querySelector("#expense-amount").value;
+          const description = document.querySelector(
+            "#expense-description"
+          ).value;
+          const category = document.querySelector("#expense-category").value;
+
+          try {
+            if (updateExpenseId) {
+              await axios.put(`/Expense/expenses/${updateExpenseId}`, {
+                expenseAmount,
+                description,
+                category,
+              });
+              updateExpenseId = null;
+            } else {
+              await axios.post("/Expense/expenses", {
+                expenseAmount,
+                description,
+                category,
+              });
+            }
+
+            getExpense();
+          } catch (error) {
+            console.error("Error:", error);
+          }
+          document.getElementById("expense-amount").value = "";
+          document.getElementById("expense-description").value = "";
+          document.getElementById("expense-category").value = "";
+        });
+
+        async function getExpense() {
+          try {
+            const response = await axios.get("/Expense/expenses");
+            showExpenses(response.data);
+          } catch (error) {
+            console.error("Error:", error);
+          }
+        }
+
+        function showExpenses(data) {
+          userList.innerHTML = "";
+          data.forEach((expense) => {
+            const listItem = document.createElement("li");
+            listItem.style.listStyle = 'none';
+            listItem.textContent = `${expense.expenseAmount} - ${expense.description} - ${expense.category}`;
+
+            const deleteBtn = document.createElement("button");
+            deleteBtn.textContent = "Delete Expense";
+            deleteBtn.style.margin = "0 0 10px 10px";
+            deleteBtn.addEventListener("click", () =>
+              deleteExpense(expense.id)
+            );
+
+            const editBtn = document.createElement("button");
+            editBtn.textContent = "Edit Expense";
+            editBtn.style.marginLeft = "10px";
+            editBtn.addEventListener("click", () => editExpense(expense));
+
+            listItem.appendChild(deleteBtn);
+            listItem.appendChild(editBtn);
+            userList.appendChild(listItem);
+          });
+        }
+
+        async function deleteExpense(id) {
+          try {
+            await axios.delete(`Expense/expenses/${id}`);
+            getExpense();
+          } catch (error) {
+            console.error("Error:", error);
+          }
+        }
+
+        function editExpense(expense) {
+          updateExpenseId = expense.id;
+          document.getElementById("expense-amount").value =
+            expense.expenseAmount;
+          document.getElementById("expense-description").value =
+            expense.description;
+          document.getElementById("expense-category").value = expense.category;
+        }
+        getExpense();
+      });
+    </script>
+  </body>
+</html>
